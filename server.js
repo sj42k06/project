@@ -29,16 +29,6 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
-app.post("/login", (req, res) => {
-  const { userid, pwd } = req.body;
-
-  if (userid === "1234" && pwd === "1234") {
-    res.redirect("/index.html");
-  } else {
-    res.send("로그인 실패");
-  }
-});
-
 app.post("/upload", upload.single("image"), (req, res) => {
   try {
     const description = req.body.description;
