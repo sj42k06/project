@@ -30,19 +30,7 @@ app.get("/", (req, res) => {
 });
 
 app.post("/upload", upload.single("image"), (req, res) => {
-  try {
-    const description = req.body.description;
-    const image = req.file ? req.file.filename : null;
-
-    res.send({
-      message: "upload success",
-      description,
-      image,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("error");
-  }
+  res.send("ok");
 });
 
 app.listen(PORT, () => {
