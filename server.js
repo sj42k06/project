@@ -4,14 +4,13 @@ const multer = require("multer");
 const path = require("path");
 
 const app = express();
-
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static("uploads"));
 
 const storage = multer.diskStorage({
@@ -19,8 +18,8 @@ const storage = multer.diskStorage({
     cb(null, "uploads/");
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
+    cb(null, Date.now() + "-" + file.originalname);
+  }
 });
 
 const upload = multer({ storage: storage });
