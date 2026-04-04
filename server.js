@@ -37,8 +37,7 @@ app.post("/login", (req, res) => {
     (err, results) => {
       if (err) {
         console.error(err);
-        res.send("DB 오류");
-        return;
+        return res.status(500).send("DB 오류");
       }
 
       if (results.length > 0) {
@@ -62,22 +61,26 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.post("/upload", upload.single("image"), (req, res) => {
-  const { riskLevel, description } = req.body;
-  const imagePath = req.file ? req.file.filename : null;
+  try {
+    const description = req.body.description || "";
+    const imagePath = req.file ? req.file.filename : null;
 
-  db.query(
-    "INSERT INTO risks (zone_id, user_id, title, description, image_path, risk_level, status) VALUES (1, 1, '위험', ?, ?, 1, '미조치')",
-    [description, imagePath],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        res.send("DB 저장 실패");
-        return;
+    db.query(
+      "INSERT INTO risks (zone_id, user_id, title, description, image_path, risk_level, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [1, 1, "위험", description, imagePath, 1, "미조치"],
+      (err, result) => {
+        if (err) {
+          console.error("DB 에러:", err);
+          return res.status(500).send("DB 저장 실패");
+        }
+
+        res.send("등록 완료");
       }
-
-      res.send("등록 완료");
-    }
-  );
+    );
+  } catch (e) {
+    console.error("서버 에러:", e);
+    res.status(500).send("서버 오류");
+  }
 });
 
 app.listen(PORT, () => {
