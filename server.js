@@ -3,9 +3,14 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const mysql = require("mysql2");
+const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads");
+}
 
 app.use(cors());
 app.use(express.json());
@@ -21,8 +26,11 @@ app.get("/", (req, res) => {
 const db = mysql.createConnection(process.env.DATABASE_URL);
 
 db.connect(err => {
-  if (err) console.error(err);
-  else console.log("DB 연결 성공");
+  if (err) {
+    console.error("DB 연결 실패:", err);
+  } else {
+    console.log("DB 연결 성공");
+  }
 });
 
 app.post("/login", (req, res) => {
@@ -32,26 +40,32 @@ app.post("/login", (req, res) => {
     "SELECT * FROM users WHERE username=? AND password=?",
     [userid, pwd],
     (err, results) => {
-      if (err) return res.send("DB 오류");
+      if (err) {
+        console.error(err);
+        return res.send("DB 오류");
+      }
 
-      if (results.length > 0) res.redirect("/index.html");
-      else res.send("로그인 실패");
+      if (results.length > 0) {
+        res.redirect("/index.html");
+      } else {
+        res.send("로그인 실패");
+      }
     }
   );
 });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + "-" + file.originalname)
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, Date.now() + ext);
+  }
 });
 
 const upload = multer({ storage: storage });
 
 app.post("/upload", upload.single("image"), (req, res) => {
   const description = req.body.description || "";
-
-  // 👇 핵심: 이미지 없으면 null 대신 빈값 처리
   const imagePath = req.file ? req.file.filename : "";
 
   db.query(
@@ -59,7 +73,7 @@ app.post("/upload", upload.single("image"), (req, res) => {
     [1, 1, "위험", description, imagePath, 1, "미조치"],
     (err, result) => {
       if (err) {
-        console.error(err);
+        console.error("DB 에러:", err);
         return res.send("DB 저장 실패");
       }
 
