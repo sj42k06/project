@@ -23,7 +23,13 @@ app.get("/", (req, res) => {
   res.redirect("/login.html");
 });
 
-const db = mysql.createConnection(process.env.DATABASE_URL);
+const db = mysql.createConnection({
+  host: "junction.proxy.rlwy.net",
+  user: "root",
+  password: "uXLlzlUcfWYHaSXqVihQFxzhGnjcxbZR",
+  database: "railway",
+  port: 50160
+});
 
 db.connect(err => {
   if (err) {
@@ -65,6 +71,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.post("/upload", upload.single("image"), (req, res) => {
+  console.log("업로드 요청 들어옴");
+
   const description = req.body.description || "";
   const imagePath = req.file ? req.file.filename : "";
 
@@ -77,6 +85,7 @@ app.post("/upload", upload.single("image"), (req, res) => {
         return res.send("DB 저장 실패");
       }
 
+      console.log("DB 저장 성공");
       res.send("등록 완료");
     }
   );
