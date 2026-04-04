@@ -36,6 +36,7 @@ app.post("/login", (req, res) => {
     [userid, pwd],
     (err, results) => {
       if (err) {
+        console.error(err);
         res.send("DB 오류");
         return;
       }
@@ -60,28 +61,16 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-app.post("/login", (req, res) => {
-  const { userid, pwd } = req.body;
-
-  if (userid === "admin" && pwd === "1234") {
-    res.redirect("/index.html");
-  } else {
-    res.send("<script>alert('로그인 실패'); location.href='/login.html'</script>");
-  }
-});
-
 app.post("/upload", upload.single("image"), (req, res) => {
-<<<<<<< HEAD
-  res.redirect("/index.html");
-=======
   const { riskLevel, description } = req.body;
   const imagePath = req.file ? req.file.filename : null;
 
   db.query(
-    "INSERT INTO risks (zone_id, user_id, title, description, image_path, risk_level) VALUES (1, 1, '위험', ?, ?, 1)",
+    "INSERT INTO risks (zone_id, user_id, title, description, image_path, risk_level, status) VALUES (1, 1, '위험', ?, ?, 1, '미조치')",
     [description, imagePath],
     (err, result) => {
       if (err) {
+        console.error(err);
         res.send("DB 저장 실패");
         return;
       }
@@ -89,7 +78,6 @@ app.post("/upload", upload.single("image"), (req, res) => {
       res.send("등록 완료");
     }
   );
->>>>>>> eb423d2 (db 연결)
 });
 
 app.listen(PORT, () => {
