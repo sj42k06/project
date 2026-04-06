@@ -1,96 +1,61 @@
 const express = require("express");
-const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
-const mysql = require("mysql2");
 const fs = require("fs");
+const { exec } = require("child_process");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
-}
-
-app.use(cors());
-app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static("public"));
+app.use("/frames", express.static("frames"));
 app.use("/uploads", express.static("uploads"));
 
-app.get("/", (req, res) => {
-  res.redirect("/login.html");
-});
-
-const db = mysql.createConnection({
-  host: "junction.proxy.rlwy.net",
-  user: "root",
-  password: "uXLlzlUcfWYHaSXqVihQFxzhGnjcxbZR",
-  database: "railway",
-  port: 50160
-});
-
-db.connect(err => {
-  if (err) {
-    console.error("DB 연결 실패:", err);
-  } else {
-    console.log("DB 연결 성공");
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = "uploads";
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
   }
+});
+
+const upload = multer({ storage });
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
 app.post("/login", (req, res) => {
-  const { userid, pwd } = req.body;
+  const { id, pw } = req.body;
 
-  db.query(
-    "SELECT * FROM users WHERE username=? AND password=?",
-    [userid, pwd],
-    (err, results) => {
-      if (err) {
-        console.error(err);
-        return res.send("DB 오류");
-      }
-
-      if (results.length > 0) {
-        res.redirect("/index.html");
-      } else {
-        res.send("로그인 실패");
-      }
-    }
-  );
-});
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, Date.now() + ext);
+  if (id === "admin" && pw === "1234") {
+    res.redirect("/upload.html");
+  } else {
+    res.send("아이디 또는 비밀번호 틀림");
   }
 });
 
-const upload = multer({ storage: storage });
+app.post("/upload", upload.single("video"), (req, res) => {
+  const videoPath = req.file.path;
+  const videoName = path.parse(req.file.filename).name;
 
-app.post("/upload", upload.single("image"), (req, res) => {
-  console.log("업로드 요청 들어옴");
-
-  const description = req.body.description || "";
-  const imagePath = req.file ? req.file.filename : "";
-
-  db.query(
-    "INSERT INTO risks (zone_id, user_id, title, description, image_path, risk_level, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [1, 1, "위험", description, imagePath, 1, "미조치"],
-    (err, result) => {
-      if (err) {
-        console.error("DB 에러:", err);
-        return res.send("DB 저장 실패");
-      }
-
-      console.log("DB 저장 성공");
-      res.send("등록 완료");
+  exec(`python3 frame_extractor.py ${videoPath}`, (err) => {
+    if (err) {
+      console.error(err);
+      return res.send("python 실행 오류");
     }
-  );
+
+    res.send(`
+      <h2>완료</h2>
+      <a href="/frames/${videoName}/frame_0.jpg">프레임 보기</a>
+    `);
+  });
 });
 
 app.listen(PORT, () => {
-  console.log(`server running on port ${PORT}`);
+  console.log("server running on port " + PORT);
 });
